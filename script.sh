@@ -170,3 +170,41 @@ server {
 EOF
     echo_color "$GREEN" "nginx config created at $NGINX_CONF"
 }
+
+# ----------------------------
+# Generate Dockerfile
+# ----------------------------
+make_dockerfile() {
+    cat > "$DOCKERFILE" <<EOF
+FROM nginx:alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY server.crt /etc/nginx/certs/server.crt
+COPY server.key /etc/nginx/certs/server.key
+CMD ["nginx", "-g", "daemon off;"]
+EOF
+    echo_color "$GREEN" "Dockerfile created at $DOCKERFILE"
+}
+
+# ----------------------------
+# Start Docker container
+# ----------------------------
+start_docker() {
+    PORT="$1"
+    IP="$2"
+    docker rm -f "$DOCKER_CONTAINER" >/dev/null 2>&1 || true
+    docker build -t "${PROJECT_NAME}-nginx" "$DEVPROXY_DIR"
+    echo_color "$CYAN" "Starting Docker container..."
+    docker run -d --name "$DOCKER_CONTAINER" \
+        --add-host=host.docker.internal:host-gateway \
+        -p 443:443 -p 80:80 \
+        "${PROJECT_NAME}-nginx"
+    echo_color "$GREEN" "Container running. Access at https://$IP"
+}
+
+# ----------------------------
+# Stop Docker container
+# ----------------------------
+stop_docker() {
+    docker rm -f "$DOCKER_CONTAINER" >/dev/null 2>&1 || true
+    echo_color "$GREEN" "Container stopped."
+}
