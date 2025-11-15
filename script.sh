@@ -140,3 +140,33 @@ EOF
     rm -f "$CFG"
     echo_color "$GREEN" "SSL created at $SSL_CERT"
 }
+
+# ----------------------------
+# Generate nginx.conf
+# ----------------------------
+make_nginx_conf() {
+    PORT="$1"
+    IP="$2"
+    cat > "$NGINX_CONF" <<EOF
+server {
+    listen 443 ssl;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/certs/server.crt;
+    ssl_certificate_key /etc/nginx/certs/server.key;
+
+    location / {
+        proxy_pass http://host.docker.internal:$PORT;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+    }
+}
+
+server {
+    listen 80;
+    server_name _;
+    return 301 https://\$host\$uri;
+}
+EOF
+    echo_color "$GREEN" "nginx config created at $NGINX_CONF"
+}
