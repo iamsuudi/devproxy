@@ -39,3 +39,54 @@ DOCKERFILE="$DEVPROXY_DIR/Dockerfile"
 DOCKER_CONTAINER="${PROJECT_NAME}-nginx"
 
 mkdir -p "$DEVPROXY_DIR"
+
+# ----------------------------
+# Detect LAN IP
+# ----------------------------
+detect_ip() {
+    # Return persisted IP if exists
+    if [[ -f "$IP_FILE" ]]; then
+        cat "$IP_FILE"
+        return
+    fi
+
+    echo_color "$CYAN" "Detecting LAN IP..." >&2
+    IPS=$(ip -4 -o addr show \
+        | awk '!/docker|br-|virbr|veth|lo|tailscale|wg0/ {print $4}' \
+        | cut -d/ -f1)
+
+    if [[ -z "$IPS" ]]; then
+        echo_color "$YELLOW" "Could not detect via 'ip'. Trying hostname -I..." >&2
+        IPS=$(hostname -I 2>/dev/null | awk '{print $1}')
+    fi
+
+    if [[ -z "$IPS" ]]; then
+        echo_color "$RED" "No LAN IP detected." >&2
+        read -p "Enter LAN IP manually: " manual_ip
+        echo "$manual_ip"
+        echo "$manual_ip" > "$IP_FILE"
+        echo "$manual_ip"
+        return
+    fi
+
+    COUNT=$(echo "$IPS" | wc -l)
+    if [[ "$COUNT" -eq 1 ]]; then
+        echo_color "$GREEN" "Using IP: $IPS" >&2
+        echo "$IPS" > "$IP_FILE"
+        echo "$IPS"
+        return
+    fi
+
+    echo_color "$YELLOW" "Multiple LAN IPs detected:" >&2
+    echo "$IPS" | nl >&2
+    read -p "Choose IP number: " choice
+    SELECTED=$(echo "$IPS" | sed -n "${choice}p")
+    if [[ -z "$SELECTED" ]]; then
+        read -p "Enter IP manually: " manual_ip
+        echo "$manual_ip" > "$IP_FILE"
+        echo "$manual_ip"
+    else
+        echo "$SELECTED" > "$IP_FILE"
+        echo "$SELECTED"
+    fi
+}
