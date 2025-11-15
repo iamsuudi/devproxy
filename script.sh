@@ -107,3 +107,36 @@ get_port() {
     echo "$PORT" > "$PORT_FILE"
     echo "$PORT"
 }
+
+# ----------------------------
+# Generate SSL
+# ----------------------------
+make_ssl() {
+    IP="$1"
+    echo_color "$CYAN" "Generating SSL certificate..." 
+
+    CFG=$(mktemp)
+    cat > "$CFG" <<EOF
+[req]
+default_bits = 2048
+prompt = no
+default_md = sha256
+distinguished_name = dn
+req_extensions = v3_req
+
+[dn]
+CN = $PROJECT_NAME.local
+
+[v3_req]
+subjectAltName = IP:$IP
+EOF
+
+    openssl req -x509 -nodes -days 365 \
+        -newkey rsa:2048 \
+        -keyout "$SSL_KEY" \
+        -out "$SSL_CERT" \
+        -config "$CFG"
+
+    rm -f "$CFG"
+    echo_color "$GREEN" "SSL created at $SSL_CERT"
+}
