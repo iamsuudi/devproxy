@@ -90,3 +90,20 @@ detect_ip() {
         echo "$SELECTED"
     fi
 }
+
+# ----------------------------
+# Detect Port
+# ----------------------------
+get_port() {
+    if [[ -f "$PORT_FILE" ]]; then
+        cat "$PORT_FILE"
+        return
+    fi
+    while true; do
+        read -p "Enter backend port (e.g., 3001): " PORT
+        [[ "$PORT" =~ ^[0-9]+$ ]] && break
+        echo_color "$RED" "Port must be numeric."
+    done
+    echo "$PORT" > "$PORT_FILE"
+    echo "$PORT"
+}
