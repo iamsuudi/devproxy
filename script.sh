@@ -208,3 +208,51 @@ stop_docker() {
     docker rm -f "$DOCKER_CONTAINER" >/dev/null 2>&1 || true
     echo_color "$GREEN" "Container stopped."
 }
+
+# ----------------------------
+# Status
+# ----------------------------
+status_docker() {
+    if docker ps --filter "name=$DOCKER_CONTAINER" --format '{{.Names}}' | grep -q "$DOCKER_CONTAINER"; then
+        echo_color "$GREEN" "Container '$DOCKER_CONTAINER' is running."
+    else
+        echo_color "$YELLOW" "Container '$DOCKER_CONTAINER' is not running."
+    fi
+}
+
+# ----------------------------
+# CLI
+# ----------------------------
+CMD="$1"
+shift || true
+
+case "$CMD" in
+    init)
+        PORT=$(get_port)
+        IP=$(detect_ip)
+        make_ssl "$IP"
+        make_nginx_conf "$PORT" "$IP"
+        make_dockerfile
+        ;;
+    start)
+        PORT=$(get_port)
+        IP=$(cat "$IP_FILE")
+        start_docker "$PORT" "$IP"
+        ;;
+    stop)
+        stop_docker
+        ;;
+    regen)
+        PORT=$(get_port)
+        IP=$(cat "$IP_FILE")
+        make_ssl "$IP"
+        make_nginx_conf "$PORT" "$IP"
+        make_dockerfile
+        ;;
+    status)
+        status_docker
+        ;;
+    *)
+        echo_color "$CYAN" "Usage: devproxy <init|start|stop|regen|status>"
+        ;;
+esac
